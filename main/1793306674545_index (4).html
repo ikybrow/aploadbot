@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Neromatic - Tambah Produk</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<style>
+[x-cloak]{display:none!important}
+body{background:#0f172a}
+.panel{background:#1e293b}
+.grad{background:linear-gradient(135deg,#818cf8 0%,#c084fc 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+::-webkit-scrollbar{height:6px;width:6px}
+::-webkit-scrollbar-thumb{background:#475569;border-radius:4px}
+article h3{font-weight:700;color:#fff;margin-top:1.25rem;margin-bottom:.5rem}
+article p{color:#94a3b8;margin-bottom:.75rem;line-height:1.6}
+article ul{color:#94a3b8;margin-bottom:.75rem;padding-left:1.25rem;list-style:disc}
+article li{margin-bottom:.4rem}
+article code{background:#1e293b;padding:2px 6px;border-radius:6px;color:#c4b5fd;font-size:.85em}
+</style>
+</head>
+<body class="text-slate-200 font-sans min-h-screen py-10 px-4 sm:px-6">
+<div x-data="productApp()" x-cloak class="max-w-4xl mx-auto pb-24">
+
+    <div @show-toast.window="toast=$event.detail;setTimeout(()=>toast='',3000)"
+         class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 transition-all duration-300"
+         :class="toast!==''?'translate-y-0 opacity-100':'translate-y-10 opacity-0'">
+        <div class="bg-indigo-600 text-white px-5 py-2.5 rounded-full shadow-lg text-sm font-medium" x-text="toast"></div>
+    </div>
+
+    <div class="mb-8 flex items-start justify-between gap-3">
+        <div>
+            <h1 class="text-3xl font-extrabold grad" x-text="tokoName"></h1>
+            <p class="text-slate-400 text-sm mt-1" x-text="tab==='tips' ? 'Tips & Tutorial' : 'Form Tambah Produk'"></p>
+        </div>
+        <a :href="tab==='tips' ? '?' : '?tab=tips'" class="shrink-0 w-9 h-9 flex items-center justify-center rounded-full bg-slate-800 border border-slate-600 text-slate-300 hover:border-indigo-500 hover:text-white font-bold">?</a>
+    </div>
+
+    <template x-if="tab==='tips'">
+    <article class="panel border border-slate-700/50 p-6 rounded-2xl">
+        <h3>1. Alur Singkat</h3>
+        <p>Isi detail produk di form ini → tekan <code>Buat Link Produk</code> → salin perintah <code>.addproduk [link]</code> yang muncul → kirim ke bot kamu. Produk langsung masuk database dan bisa langsung diakses lewat kode perintahnya (slug).</p>
+
+        <h3>2. Statis vs Dinamis — Ini yang Paling Penting</h3>
+        <p><b>Statis</b> = produk TANPA sistem stok. Begitu pembeli bayar dan kamu klik <code>.acc</code>, bot cuma bilang ke pembeli "pesanan sedang diproses" — <b>kamu (owner) yang harus kirim manual</b> ke pembeli lewat chat pribadi. Cocok buat jasa, produk custom, atau apapun yang butuh kamu proses satu-satu.</p>
+        <p><b>Dinamis</b> = produk DENGAN sistem stok otomatis. Tiap varian punya "gudang stok" sendiri yang diisi lewat <code>.addstok</code>. Begitu pembeli bayar dan di-<code>.acc</code>, bot otomatis ambil 1 stok dari gudang dan kirim ke pembeli secara pribadi, tanpa kamu perlu turun tangan. Cocok buat akun premium, kode voucher, atau apapun yang bisa disetok di awal.</p>
+        <p>Kalau stok varian dinamis habis, pembeli akan lihat "stok kosong" saat mau checkout sampai kamu isi ulang lewat <code>.addstok</code>.</p>
+
+        <h3>3. Kode Perintah (Slug)</h3>
+        <p>Kode singkat yang jadi perintah LANGSUNG ke bot, contoh <code>.netflixpremium</code> — pembeli tinggal ketik itu buat lihat detail produkmu, gak perlu ketik <code>.produk Netflix Premium</code> lagi (walau cara lama itu masih tetap bisa dipakai sebagai alternatif). Otomatis terisi dari nama produk, tapi bebas diedit. Kalau kodenya sudah dipakai produk lain atau bentrok sama perintah bawaan bot, form ini langsung kasih tahu (teks merah di bawah kolomnya) sebelum kamu generate link — jadi gak perlu nebak-nebak.</p>
+
+        <h3>4. Kategori</h3>
+        <p>Dipakai buat mengelompokkan produk saat pembeli ketik <code>.produk</code> (list semua produk) — produk dengan kategori sama bakal ditampilkan berbarengan di bawah satu judul kategori. Isi bebas, misal <code>Streaming</code>, <code>Edukasi</code>, <code>Sosial Media</code>, dst. Kalau kosong otomatis masuk kategori "Lainnya".</p>
+
+        <h3>5. Thumbnail</h3>
+        <p>Gambar sampul produk. Tinggal pilih gambar di form, otomatis ke-upload dan link-nya kepasang ke produk. Ini yang muncul di kartu produk saat pembeli lihat detail via <code>.{slug}</code> atau <code>.produk</code>. Kalau gak diisi, bot pakai gambar default dari <code>global.thumb.produk</code>.</p>
+
+        <h3>6. Multi Varian</h3>
+        <p>Satu produk bisa punya banyak varian, misalnya paket durasi berbeda: <code>1 Bulan</code>, <code>3 Bulan</code>, <code>1 Tahun</code> — masing-masing harga sendiri. Klik <code>+ Varian</code> buat nambah. Untuk produk Dinamis, tiap varian juga punya gudang stok TERPISAH — jadi stok "1 Bulan" gak akan kepakai buat pesanan "1 Tahun", isi keduanya sendiri-sendiri lewat <code>.addstok</code>.</p>
+
+        <h3>7. Form Tambahan (Kolom Bebas)</h3>
+        <p>Tiap varian punya kolom bebas (Nama Kolom : Isi) di bawah Nama & Harga. Ini info <b>PUBLIK</b> yang ikut ditampilkan di kartu detail produk ke SEMUA orang yang lihat — sebelum mereka beli. Jadi isi ini dengan info deskriptif/spesifikasi produk, BUKAN data sensitif.</p>
+        <p><b>Contoh yang benar:</b> <code>Garansi: 7 Hari</code>, <code>Durasi: 30 Hari</code>, <code>Catatan: Hanya 1 Perangkat</code>, <code>Region: Indonesia</code>.</p>
+        <p><b>Jangan isi</b> data akun/kredensial asli di sini (email, password, kode voucher, dsb) — itu PUBLIK dan bisa dilihat siapa saja yang belum bayar. Fitur ini berlaku sama persis buat produk Statis maupun Dinamis.</p>
+
+        <h3>8. Kalau Data yang Dikirim ke Pembeli Itu Sensitif, Taruh di Mana?</h3>
+        <p>Kalau produkmu Dinamis dan yang dikirim ke pembeli itu data asli (misal akun premium sungguhan), itu masuknya ke <b>stok</b>, bukan Form Tambahan di atas. Stok diisi lewat <code>.addstok</code> dan sifatnya PRIVAT — cuma dikirim ke pembeli yang sudah bayar dan di-ACC, gak pernah tampil di kartu produk publik.</p>
+
+        <h3>9. Cara Isi Stok (Khusus Produk Dinamis)</h3>
+        <p>Ketik <code>.addstok</code> di bot, lalu ikuti langkah: pilih produk → pilih varian → upload file <code>.txt</code> berisi data stok. Format file:</p>
+        <ul>
+            <li>Pakai <code>:</code> buat misahin nama kolom dan isinya (misal <code>Email: a@mail.com</code>)</li>
+            <li>Pakai Enter buat kolom baru DALAM satu stok yang sama (misal Email di baris 1, Password di baris 2)</li>
+            <li>Pakai koma <code>,</code> buat misahin ANTAR stok yang beda</li>
+        </ul>
+        <p>Setelah upload, bot kasih preview data yang kedetek — konfirmasi kalau sudah benar, baru masuk database.</p>
+        <p><b>Mau lebih cepat?</b> Pakai format pintas <code>.addstok slug|varian|link</code> — ketiganya opsional, bisa isi sebagian buat lompat ke step tertentu:</p>
+        <ul>
+            <li><code>.addstok netflixpremium</code> → langsung lompat ke pilih varian (skip pilih produk)</li>
+            <li><code>.addstok netflixpremium|1 Bulan</code> → langsung lompat ke upload file (skip pilih produk & varian)</li>
+            <li><code>.addstok netflixpremium|1 Bulan|https://link-file-txt-kamu</code> → langsung diproses dari link, gak perlu upload manual sama sekali</li>
+        </ul>
+
+        <h3>10. Kelola Produk Setelah Dibuat</h3>
+        <p>Semua ini dijalankan langsung di chat bot (bukan di form ini):</p>
+        <ul>
+            <li><code>.addproduk</code> — bikin produk baru (link form ini lagi)</li>
+            <li><code>.editproduk [slug]</code> — edit data produk (nama, slug, kategori, deskripsi, thumbnail), satu-satu atau sekaligus semua, ada konfirmasi sebelum disimpan. Thumbnail bisa langsung kirim foto (otomatis diunggah) atau tempel link</li>
+            <li><code>.addvarian</code> — tambah varian baru ke produk yang sudah ada, step-by-step lewat chat</li>
+            <li><code>.editvarian [slug|varian]</code> — edit nama/harga/form tambahan sebuah varian</li>
+            <li><code>.addstok [slug|varian|link]</code> — isi/tambah stok ke varian produk Dinamis; bagian dalam kurung siku opsional buat skip langkah, bisa juga sambil reply file .txt langsung</li>
+            <li><code>.delstok [slug|varian]</code> — hapus stok satu item tertentu atau semua sekaligus dari sebuah varian</li>
+            <li><code>.delvarian</code> — hapus satu varian tertentu dari sebuah produk</li>
+            <li><code>.delproduk</code> — hapus produk beserta semua variannya</li>
+            <li><code>.addfaq Pertanyaan|Jawaban</code>, <code>.editfaq Nomor|Pertanyaan baru|Jawaban baru</code>, <code>.delfaq Nomor</code> — kelola FAQ, otomatis tersimpan ke config.js</li>
+            <li><code>.addprefix &lt;prefix&gt;</code>, <code>.delprefix &lt;prefix&gt;</code> — kelola prefix bot, bisa lebih dari satu dipisah spasi. Prefix kosong (bot dipanggil tanpa prefix) pakai <code>""</code> atau <code>kosong</code></li>
+            <li><code>.ban [nomor/ID grup] [alasan]</code>, <code>.unban [nomor/ID grup/nomor urut]</code>, <code>.listban</code> — blacklist chat atau grup supaya bot tidak merespon di sana (tanpa argumen, yang kena adalah chat tempat perintah dikirim). Owner tetap bisa memakai bot di chat yang diban</li>
+            <li><code>.rekap [hariini|minggu|bulan|semua]</code> — rekap transaksi berupa tabel, plus file Excel lengkap (ringkasan, transaksi, produk, pembeli)</li>
+            <li><code>.ping</code> dan <code>.sysinfo</code> — cek kecepatan respon dan data server lengkap (CPU, RAM, penyimpanan, runtime, statistik bot)</li>
+            <li><code>.addpayment Nama|Isi</code>, <code>.editpayment Nama|Isi baru</code>, <code>.delpayment Nama</code> — kelola metode pembayaran (bank/e-wallet), otomatis tersimpan ke config.js</li>
+        </ul>
+
+        <h3>11. Voucher / Kode Promo</h3>
+        <p>Ketik <code>.addvoucher</code> buat dapat form pembuatan voucher, isi semua kolom (nilai diskon, target pengguna, batas pemakaian, masa berlaku, dst) lalu tekan <code>Buat Perintah</code> — perintah <code>.addvoucher [kode]</code> otomatis tersalin, tinggal tempel dan kirim ke bot.</p>
+        <ul>
+            <li><code>.editvoucher [KODE]</code> — buka form buat edit voucher (tanpa kode, bot kasih pilihan)</li>
+            <li><code>.delvoucher [KODE]</code> — hapus voucher, ada konfirmasi sebelum dihapus</li>
+            <li><code>.listvoucher</code> — lihat semua voucher beserta statusnya</li>
+            <li><code>.voucher [KODE]</code> — detail satu voucher, atau daftar perintah voucher kalau tanpa kode</li>
+        </ul>
+        <p>Pembeli bisa masukkan kode voucher saat checkout, di step ringkasan pesanan sebelum invoice dibuat.</p>
+
+        <h3>12. Ganti Tampilan Bot (Tema)</h3>
+        <p>Kalau ada pembeli yang HP-nya gak bisa nampilin tombol interaktif (biasanya iPhone atau WA versi lama), owner bisa ketik <code>.theme classic</code> supaya bot ganti ke mode full teks (balas pakai angka). Balik ke tombol lagi tinggal ketik <code>.theme button</code>. Ketik <code>.theme</code> tanpa apa-apa buat lihat pilihannya.</p>
+
+        <a href="?" class="inline-block mt-2 text-indigo-400 text-sm font-semibold">← Kembali ke Form</a>
+    </article>
+    </template>
+
+    <template x-if="tab==='form' && !resultLink">
+    <div>
+        <div class="flex gap-2 overflow-x-auto pb-3 mb-6 border-b border-slate-700/50">
+            <template x-for="(p,idx) in products" :key="p.uid">
+                <button @click="active=idx" class="px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap"
+                    :class="active===idx?'bg-indigo-600 text-white':'bg-slate-800 text-slate-400 hover:text-slate-200'">
+                    Produk <span x-text="idx+1"></span>
+                    <span @click.stop="removeProduct(idx)" x-show="products.length>1" class="ml-2 text-slate-400 hover:text-red-400">&times;</span>
+                </button>
+            </template>
+            <button @click="addProduct()" class="px-4 py-2 rounded-xl text-sm border border-dashed border-slate-600 text-slate-400 hover:text-white">+ Produk</button>
+        </div>
+
+        <template x-for="(prod,pIdx) in products" :key="prod.uid">
+        <div x-show="active===pIdx" class="space-y-6">
+
+            <div class="panel border border-slate-700/50 p-6 rounded-2xl space-y-5">
+                <h2 class="font-bold text-white">Informasi Produk</h2>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="flex-1">
+                        <label class="cursor-pointer">
+                            <input type="radio" x-model="prod.type" value="static" class="hidden peer">
+                            <div class="border border-slate-700 bg-slate-800/50 p-3 rounded-xl text-center peer-checked:border-indigo-500 peer-checked:bg-indigo-500/10 peer-checked:text-indigo-300">
+                                <div class="font-semibold text-sm">Statis</div>
+                                <div class="text-[11px] text-slate-500">Data langsung, tanpa stok</div>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="flex-1">
+                        <label class="cursor-pointer">
+                            <input type="radio" x-model="prod.type" value="dynamic" class="hidden peer">
+                            <div class="border border-slate-700 bg-slate-800/50 p-3 rounded-xl text-center peer-checked:border-indigo-500 peer-checked:bg-indigo-500/10 peer-checked:text-indigo-300">
+                                <div class="font-semibold text-sm">Dinamis</div>
+                                <div class="text-[11px] text-slate-500">Punya sistem stok</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-xs text-slate-400">Nama Produk</label>
+                        <input x-model="prod.name" @input="if (!prod.slugTouched) prod.slug = slugify(prod.name)" type="text" placeholder="Contoh: Netflix Premium" class="mt-1 w-full bg-slate-800/50 border border-slate-600 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-indigo-500">
+                    </div>
+                    <div class="relative">
+                        <label class="text-xs text-slate-400">Kategori</label>
+                        <input x-model="prod.cat" @focus="prod.catOpen = true" @input="prod.catOpen = true" @click.outside="prod.catOpen = false" type="text" autocomplete="off" placeholder="Contoh: Streaming" class="mt-1 w-full bg-slate-800/50 border border-slate-600 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-indigo-500">
+                        <div x-show="prod.catOpen && filteredCategories(prod).length > 0" x-cloak class="absolute z-20 mt-1 w-full bg-slate-800 border border-slate-600 rounded-xl overflow-hidden shadow-lg max-h-40 overflow-y-auto">
+                            <template x-for="c in filteredCategories(prod)" :key="c">
+                                <div @click="prod.cat = c; prod.catOpen = false" class="px-3 py-2 text-sm hover:bg-indigo-600 cursor-pointer" x-text="c"></div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-xs text-slate-400">Kode Perintah (Slug)</label>
+                    <div class="mt-1 flex items-center gap-2">
+                        <span class="text-slate-500 text-sm">.</span>
+                        <input x-model="prod.slug" @input="prod.slugTouched = true; prod.slug = slugify(prod.slug)" type="text" placeholder="netflixpremium" class="w-full bg-slate-800/50 border rounded-xl px-3 py-2.5 text-sm outline-none focus:border-indigo-500" :class="slugTaken(prod) ? 'border-red-500' : 'border-slate-600'">
+                    </div>
+                    <p x-show="slugTaken(prod)" class="text-[11px] text-red-400 mt-1">Kode ini sudah dipakai produk/perintah lain, ganti dengan yang lain ya.</p>
+                    <p x-show="!slugTaken(prod)" class="text-[11px] text-slate-500 mt-1">Otomatis terisi dari nama produk, bisa diedit bebas. Ini yang jadi perintah langsung ke bot.</p>
+                </div>
+
+                <div>
+                    <label class="text-xs text-slate-400">Deskripsi</label>
+                    <textarea x-model="prod.desc" rows="2" placeholder="Deskripsi singkat produk" class="mt-1 w-full bg-slate-800/50 border border-slate-600 rounded-xl px-3 py-2.5 text-sm outline-none focus:border-indigo-500"></textarea>
+                </div>
+
+                <div>
+                    <label class="text-xs text-slate-400">Thumbnail Produk</label>
+                    <div class="mt-1 flex items-center gap-3">
+                        <img :src="prod.thumb || 'https://via.placeholder.com/80x80.png?text=IMG'" class="w-16 h-16 rounded-xl object-cover border border-slate-700">
+                        <label class="cursor-pointer text-sm px-4 py-2 rounded-xl bg-slate-800 border border-slate-600 hover:border-indigo-500">
+                            <span x-text="prod.uploadingThumb ? 'Mengunggah...' : 'Pilih Gambar'"></span>
+                            <input type="file" accept="image/*" class="hidden" @change="uploadThumbnail($event, prod)">
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel border border-slate-700/50 p-6 rounded-2xl space-y-4">
+                <div class="flex items-center justify-between">
+                    <h2 class="font-bold text-white">Varian</h2>
+                    <button @click="addVariant(prod)" class="text-xs px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500">+ Varian</button>
+                </div>
+
+                <template x-for="(v,vIdx) in prod.variants" :key="v.uid">
+                <div class="border border-slate-700 rounded-xl p-4 space-y-3">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs text-slate-400">Varian <span x-text="vIdx+1"></span></span>
+                        <button @click="prod.variants.splice(vIdx,1)" class="text-xs text-red-400">Hapus</button>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-xs text-slate-400">Nama Varian</label>
+                            <input x-model="v.name" type="text" placeholder="Contoh: 1 Bulan / Standard" class="mt-1 w-full bg-slate-800/50 border border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500">
+                        </div>
+                        <div>
+                            <label class="text-xs text-slate-400">Harga (Rp)</label>
+                            <input x-model.number="v.price" type="number" placeholder="15000" class="mt-1 w-full bg-slate-800/50 border border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500">
+                        </div>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="text-xs text-slate-400">Form Tambahan (Nama Kolom : Isi)</label>
+                        <template x-for="(f,fIdx) in v.fields" :key="fIdx">
+                            <div class="flex gap-2">
+                                <input x-model="f.key" placeholder="Nama Kolom" class="flex-1 bg-slate-800/50 border border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500">
+                                <input x-model="f.value" placeholder="Isi" class="flex-1 bg-slate-800/50 border border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500">
+                                <button @click="v.fields.splice(fIdx,1)" class="px-2 text-red-400">&times;</button>
+                            </div>
+                        </template>
+                        <button @click="v.fields.push({key:'',value:''})" class="text-xs text-indigo-400">+ Tambah Kolom</button>
+                    </div>
+                </div>
+                </template>
+
+                <p x-show="prod.variants.length===0" class="text-xs text-slate-500">Belum ada varian, klik "+ Varian" di atas.</p>
+            </div>
+        </div>
+        </template>
+
+        <button @click="submit()" :disabled="submitting" class="mt-6 w-full py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 font-semibold disabled:opacity-50">
+            <span x-text="submitting ? 'Menyiapkan Link...' : 'Buat Link Produk'"></span>
+        </button>
+    </div>
+    </template>
+
+    <template x-if="tab==='form' && resultLink">
+    <div class="panel border border-slate-700/50 p-8 rounded-2xl text-center space-y-4">
+        <h2 class="text-xl font-bold text-white">Link Produk Siap!</h2>
+        <p class="text-slate-400 text-sm">Kirim perintah di bawah ini ke bot Neromatic kamu.</p>
+        <div class="bg-slate-800 rounded-xl px-4 py-3 text-left text-sm break-all font-mono" x-text="'.addproduk ' + resultLink"></div>
+        <button @click="copyCommand()" class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-sm font-semibold">Salin Perintah</button>
+    </div>
+    </template>
+</div>
+
+<script>
+function productApp() {
+    return {
+        tab: new URLSearchParams(location.search).get('tab') === 'tips' ? 'tips' : 'form',
+        tokoName: [[TOKO_NAME]],
+        categoriesList: [[CATEGORIES]],
+        reservedSlugs: [[RESERVED_SLUGS]],
+        active: 0,
+        toast: '',
+        submitting: false,
+        resultLink: '',
+        products: [{
+            uid: crypto.randomUUID(),
+            name: '', cat: '', catOpen: false, desc: '', type: 'static', thumb: '', slug: '', slugTouched: false,
+            uploadingThumb: false,
+            variants: []
+        }],
+
+        addProduct() {
+            this.products.push({
+                uid: crypto.randomUUID(),
+                name: '', cat: '', catOpen: false, desc: '', type: 'static', thumb: '', slug: '', slugTouched: false,
+                uploadingThumb: false,
+                variants: []
+            })
+            this.active = this.products.length - 1
+        },
+
+        removeProduct(idx) {
+            this.products.splice(idx, 1)
+            if (this.active >= this.products.length) this.active = this.products.length - 1
+        },
+
+        slugify(text) {
+            return (text || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '')
+        },
+
+        filteredCategories(prod) {
+            let q = (prod.cat || '').toLowerCase()
+            let list = this.categoriesList.filter(c => c.toLowerCase() !== q)
+            if (!q) return list
+            return list.filter(c => c.toLowerCase().includes(q))
+        },
+
+        slugTaken(prod) {
+            let slug = this.slugify(prod.slug)
+            if (!slug) return false
+            if (this.reservedSlugs.includes(slug)) return true
+            return this.products.some(p => p.uid !== prod.uid && this.slugify(p.slug) === slug)
+        },
+
+        addVariant(prod) {
+            prod.variants.push({ uid: crypto.randomUUID(), name: '', price: 0, fields: [{ key: '', value: '' }] })
+        },
+
+        notify(text) {
+            window.dispatchEvent(new CustomEvent('show-toast', { detail: text }))
+        },
+
+        async uploadToCdn(file, fileName) {
+            const form = new FormData()
+            form.append('file', file, fileName)
+            const res = await fetch('https://cdn.zass.in/upload', { method: 'POST', body: form })
+            const data = await res.json()
+            if (!data.success || !data.url) throw new Error(data.message || 'Upload gagal')
+            return data.url
+        },
+
+        async uploadThumbnail(event, prod) {
+            const file = event.target.files[0]
+            if (!file) return
+            prod.uploadingThumb = true
+            try {
+                prod.thumb = await this.uploadToCdn(file, file.name)
+                this.notify('Thumbnail berhasil diunggah')
+            } catch (e) {
+                this.notify('Gagal unggah thumbnail: ' + e.message)
+            } finally {
+                prod.uploadingThumb = false
+            }
+        },
+
+        validate() {
+            for (let p of this.products) {
+                if (!p.name.trim()) { this.notify('Nama produk belum diisi'); return false }
+                if (!p.slug.trim()) { this.notify(`Kode perintah produk "${p.name}" belum diisi`); return false }
+                if (this.slugTaken(p)) { this.notify(`Kode perintah produk "${p.name}" sudah dipakai, ganti dulu`); return false }
+                if (p.variants.length === 0) { this.notify(`Varian produk "${p.name}" masih kosong`); return false }
+            }
+            return true
+        },
+
+        buildPayload() {
+            return this.products.map(p => ({
+                name: p.name.trim(),
+                slug: this.slugify(p.slug),
+                cat: p.cat.trim() || 'Lainnya',
+                desc: p.desc.trim(),
+                type: p.type,
+                thumb: p.thumb || '',
+                variants: p.variants.map(v => ({
+                    name: v.name.trim() || 'Standard',
+                    price: Number(v.price) || 0,
+                    fields: v.fields.filter(f => f.key && f.value),
+                    ...(p.type === 'dynamic' ? { stocks: [] } : {})
+                }))
+            }))
+        },
+
+        async submit() {
+            if (!this.validate()) return
+            this.submitting = true
+            try {
+                const payload = this.buildPayload()
+                const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' })
+                this.resultLink = await this.uploadToCdn(blob, `produk-${Date.now()}.json`)
+            } catch (e) {
+                this.notify('Gagal membuat link: ' + e.message)
+            } finally {
+                this.submitting = false
+            }
+        },
+
+        copyCommand() {
+            navigator.clipboard.writeText('.addproduk ' + this.resultLink)
+            this.notify('Perintah disalin ke clipboard')
+        }
+    }
+}
+</script>
+</body>
+</html>
